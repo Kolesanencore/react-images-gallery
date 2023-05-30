@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 
 import { fetchImages } from 'services/pixabayAPI';
 
@@ -8,94 +8,79 @@ import Button from './Button/Button';
 import Loader from './Loader/Loader';
 import Modal from './Modal/Modal';
 
-export class App extends Component {
-  state = {
-    images: [],
-    query: '',
-    page: 1,
-    showButton: false,
-    isLoading: false,
-    showModal: false,
-    selectedImage: null,
-  };
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [showButton, setShowButton] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.query !== this.state.query ||
-      prevState.page !== this.state.page
-    ) {
-      this.setState({ isLoading: true, showButton: false });
-      fetchImages(this.state.query, this.state.page)
-        .then(({ images, totalHits }) => {
-          this.setState(prevState => ({
-            images: [...prevState.images, ...images],
-            showButton: prevState.page < Math.ceil(totalHits / 12),
-          }));
+  useEffect(() => {
+    if (query !== '' || page !== 1) {
+      setIsLoading(true);
+      setShowButton(false);
+
+      fetchImages(query, page)
+        .then(({ images: fetchedImages, totalHits }) => {
+          setImages(prevImages => [...prevImages, ...fetchedImages]);
+          setShowButton(page < Math.ceil(totalHits / 12));
         })
         .catch(error => {
           console.error('Error fetching images:', error);
         })
         .finally(() => {
-          this.setState({ isLoading: false });
+          setIsLoading(false);
         });
     }
-  }
+  }, [query, page]);
 
-  handleSearchSubmit = query => {
-    this.setState({ query, page: 1, images: [] });
+  const handleSearchSubmit = query => {
+    setQuery(query);
+    setPage(1);
+    setImages([]);
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  openModal = (src, alt) => {
-    this.setState({ showModal: { src, alt } });
+  const openModal = (src, alt) => {
+    setShowModal({ src, alt });
   };
 
-  closeModal = () => {
-    this.setState({
-      showModal: null,
-    });
+  const closeModal = () => {
+    setShowModal(null);
   };
 
-  render() {
-    const { images, isLoading, showModal, selectedImage, showButton } =
-      this.state;
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridGap: 16,
+        paddingBottom: 24,
+      }}
+    >
+      <Searchbar onSubmit={handleSearchSubmit} />
 
-    return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gridGap: 16,
-          paddingBottom: 24,
-        }}
-      >
-        <Searchbar onSubmit={this.handleSearchSubmit} />
+      <ImageGallery images={images} onImageClick={openModal} />
 
-        <ImageGallery images={images} onImageClick={this.openModal} />
+      {isLoading && <Loader visible={isLoading} />}
 
-        {isLoading && <Loader visible={isLoading} />}
+      {images.length > 0 && !isLoading && showButton && (
+        <Button onClick={handleLoadMore} />
+      )}
 
-        {images.length > 0 && !isLoading && showButton && (
-          <Button onClick={this.handleLoadMore} />
-        )}
-
-        {showModal && (
-          <Modal
-            image={selectedImage}
-            openModal={this.openModal}
-            closeModal={this.closeModal}
-            src={showModal.src}
-            alt={showModal.alt}
-          />
-        )}
-      </div>
-    );
-  }
-}
+      {showModal && (
+        <Modal
+          src={showModal.src}
+          alt={showModal.alt}
+          closeModal={closeModal}
+        />
+      )}
+    </div>
+  );
+};
 
 export default App;
