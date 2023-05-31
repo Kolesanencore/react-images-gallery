@@ -17,28 +17,27 @@ export const App = () => {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (query !== '' || page !== 1) {
-      setIsLoading(true);
-      setShowButton(false);
+    if (!query) return;
+    setIsLoading(true);
 
-      fetchImages(query, page)
-        .then(({ images: fetchedImages, totalHits }) => {
-          setImages(prevImages => [...prevImages, ...fetchedImages]);
-          setShowButton(page < Math.ceil(totalHits / 12));
-        })
-        .catch(error => {
-          console.error('Error fetching images:', error);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
+    fetchImages(query, page)
+      .then(({ images: fetchedImages, totalHits }) => {
+        setImages(prevImages => [...prevImages, ...fetchedImages]);
+        setShowButton(page < Math.ceil(totalHits / 12));
+      })
+      .catch(error => {
+        console.error('Error fetching images:', error);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [query, page]);
 
   const handleSearchSubmit = query => {
     setQuery(query);
     setPage(1);
     setImages([]);
+    setShowButton(false);
   };
 
   const handleLoadMore = () => {
